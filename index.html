@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-SOV 스코어카드 자동 채점기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#06060c;--surface:#0e0e18;--surface2:#161624;--surface3:#1e1e30;--border:#2a2a42;--text:#eeeef4;--text-dim:#9191ab;--text-muted:#5c5c78;--accent:#6366f1;--accent2:#818cf8;--accent-glow:rgba(99,102,241,.12);--accent-glow2:rgba(99,102,241,.25);--green:#34d399;--green-dim:rgba(52,211,153,.10);--red:#fb7185;--red-dim:rgba(251,113,133,.10);--orange:#fbbf24;--cyan:#22d3ee;--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR','Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{padding:28px 36px 20px;background:linear-gradient(180deg,rgba(99,102,241,.08) 0%,transparent 100%);border-bottom:1px solid var(--border)}
+.header h1{font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.5px}
+.header h1 span{background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:var(--text-dim);font-size:13px;margin-top:4px}
+.steps-nav{display:flex;gap:0;padding:0 36px;border-bottom:1px solid var(--border);background:var(--surface)}
+.step-tab{display:flex;align-items:center;gap:8px;padding:14px 24px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;user-select:none}
+.step-tab:hover{color:var(--text-dim)}
+.step-tab.active{color:var(--accent2);border-bottom-color:var(--accent);font-weight:600}
+.step-tab.done{color:var(--green)}
+.snum{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--surface3);color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.step-tab.active .snum{background:var(--accent);color:#fff}
+.step-tab.done .snum{background:var(--green);color:#000}
+.content{padding:28px 36px;max-width:1400px}
+.section{display:none}.section.show{display:block}
+
+/* Upload area */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;margin:0 0 20px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-glow)}
+.upload-zone .icon{font-size:36px;margin-bottom:12px}
+.upload-zone p{font-size:14px;color:var(--text-dim)}
+.upload-zone .sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.upload-status{padding:14px 18px;border-radius:var(--radius);margin:0 0 20px;font-size:13px;display:none}
+.upload-status.ok{display:block;background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,.3)}
+.upload-status.err{display:block;background:var(--red-dim);color:var(--red);border:1px solid rgba(251,113,133,.3)}
+.or-divider{text-align:center;color:var(--text-muted);font-size:13px;margin:20px 0;position:relative}
+.or-divider::before,.or-divider::after{content:'';position:absolute;top:50%;width:calc(50% - 30px);height:1px;background:var(--border)}
+.or-divider::before{left:0}.or-divider::after{right:0}
+
+/* Prompt input */
+.prompt-setup-header{display:flex;justify-content:space-between;align-items:center;margin:0 0 16px}
+.prompt-setup-header h2{font-size:16px;font-weight:600}
+.add-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--accent-glow);color:var(--accent2);border:1px solid rgba(99,102,241,.3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.add-btn:hover{background:var(--accent-glow2)}
+.add-btn:disabled{opacity:.3;cursor:not-allowed}
+.pcard{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin:0 0 8px}
+.pcard:focus-within{border-color:var(--accent)}
+.pn{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent2);min-width:28px}
+.pcard input{flex:1;background:transparent;border:none;color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.pcard input::placeholder{color:var(--text-muted)}
+.rmbtn{width:24px;height:24px;border-radius:6px;background:transparent;border:1px solid transparent;color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.rmbtn:hover{background:var(--red-dim);color:var(--red);border-color:rgba(251,113,133,.3)}
+.kwbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:20px 0}
+.kwbox h3{font-size:13px;font-weight:600;margin:0 0 10px}
+.kwrow{display:flex;gap:10px;align-items:center;margin:0 0 8px}
+.kwrow label{font-size:12px;min-width:90px;font-weight:500}
+.kwrow input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.kwrow input:focus{border-color:var(--accent)}
+
+/* Response input */
+.platform-section{margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.platform-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;transition:background .15s}
+.platform-header:hover{background:var(--surface2)}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.platform-header h3{font-size:13px;font-weight:600;flex:1}
+.pbadge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 10px;border-radius:20px;background:var(--surface3);color:var(--text-muted)}
+.pbadge.done{background:var(--green-dim);color:var(--green)}
+.pchev{color:var(--text-muted);transition:transform .2s;font-size:14px}
+.platform-section.open .pchev{transform:rotate(180deg)}
+.platform-body{display:none;padding:0 16px 16px}
+.platform-section.open .platform-body{display:block}
+.pc{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px}
+.pc-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent2);margin-bottom:2px}
+.pc-text{font-size:11px;color:var(--text-dim);margin-bottom:8px;padding:5px 8px;background:rgba(99,102,241,.05);border-radius:4px;border-left:2px solid var(--accent)}
+.rr{display:flex;gap:8px;margin-bottom:5px;align-items:flex-start}
+.rl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--text-muted);min-width:28px;padding-top:8px}
+.rr textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px;color:var(--text);font-family:inherit;font-size:11px;resize:vertical;min-height:44px;transition:border-color .2s;line-height:1.5}
+.rr textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.rr textarea.filled{border-color:var(--green)}
+.progress-wrap{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.progress-bar{height:3px;background:var(--surface3);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:2px;transition:width .3s}
+
+/* Results */
+.score-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.sc .sl{font-size:11px;color:var(--text-dim);margin-bottom:4px}
+.sc .sv{font-family:'Outfit','JetBrains Mono',monospace;font-size:28px;font-weight:800}
+.sc .ss{font-size:10px;color:var(--text-muted);margin-top:2px}
+.smgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.smbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.smbox .sh{padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);background:var(--surface2)}
+.smrow{display:flex;justify-content:space-between;padding:7px 14px;font-size:11px;border-bottom:1px solid rgba(42,42,66,.3)}
+.smrow:last-child{border-bottom:none}
+.smrow .sl2{color:var(--text-dim)}.smrow .sv2{font-family:'JetBrains Mono',monospace;font-weight:600}
+.smrow.tot{background:var(--surface2);font-weight:700}.smrow.tot .sl2{color:var(--text)}
+.rtable{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.rtable h3{padding:12px 16px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--surface2);padding:7px 10px;text-align:left;font-weight:600;font-size:10px;color:var(--text-dim);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid rgba(42,42,66,.4)}
+tr:last-child td{border-bottom:none}
+.c1{display:inline-block;padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;background:var(--green-dim);color:var(--green)}
+.c0{display:inline-block;padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;background:rgba(92,92,120,.12);color:var(--text-muted)}
+.ptag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;color:#fff}
+.btn{padding:9px 22px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .2s}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:#5558e6}
+.btn-p:disabled{opacity:.35;cursor:not-allowed}
+.btn-o{background:transparent;color:var(--accent2);border:1px solid var(--accent)}.btn-o:hover{background:var(--accent-glow)}
+.btn-g{background:var(--green);color:#000;font-weight:700}.btn-g:hover{background:#2fc48d}
+.act{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+@media(max-width:900px){.content{padding:16px}.score-cards{grid-template-columns:repeat(2,1fr)}.smgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1><span>AI-SOV</span> 스코어카드 자동 채점기</h1>
+  <p>범용 GEO 측정 도구 · 엑셀 업로드 또는 수동 입력 · 4개 플랫폼 × 2회 반복</p>
+</div>
+<div class="steps-nav">
+  <div class="step-tab active" onclick="go(1)" id="t1"><span class="snum">1</span> 데이터 입력</div>
+  <div class="step-tab" onclick="go(2)" id="t2"><span class="snum">2</span> 응답 입력</div>
+  <div class="step-tab" onclick="go(3)" id="t3"><span class="snum">3</span> 채점 결과</div>
+</div>
+<div class="content">
+  <div class="section show" id="s1"></div>
+  <div class="section" id="s2"></div>
+  <div class="section" id="s3"></div>
+</div>
+
+<script>
+const PL=[{id:'chatgpt',name:'ChatGPT',color:'#10a37f'},{id:'gemini',name:'Gemini',color:'#8b5cf6'},{id:'google_aio',name:'Google AIO',color:'#4285f4'},{id:'naver_aio',name:'Naver AIO',color:'#03c75a'}];
+let step=1, prompts=['','','','',''], brandKw='KPR, 인사이트 트리, 인사이트트리, KPR Insight Tree', compKw='대학내일, 20대연구소, 대학내일20대연구소, 대학내일 20대연구소';
+let resp={}, results=null, uploadedData=null;
+
+function go(n){if(n===2&&gAP().length===0&&!uploadedData)return;if(n===3&&!results)return;step=n;['t1','t2','t3'].forEach((id,i)=>{const e=document.getElementById(id);e.classList.toggle('active',i+1===n);if(i===0&&(gAP().length>0||uploadedData)&&n>1)e.classList.add('done');else if(i===1&&results)e.classList.add('done');else e.classList.remove('done')});['s1','s2','s3'].forEach((id,i)=>document.getElementById(id).classList.toggle('show',i+1===n));if(n===1)r1();if(n===2)r2();if(n===3)r3()}
+function gAP(){return prompts.filter(p=>p.trim()).map((p,i)=>({id:'P'+String(i+1).padStart(2,'0'),text:p.trim()}))}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function sov(a,b){const t=a+b;return t===0?'-':(a/t*100).toFixed(1)+'%'}
+function chip(v){return v?'<span class="c1">1</span>':'<span class="c0">0</span>'}
+function ptag(n){const p=PL.find(x=>x.name===n);return `<span class="ptag" style="background:${p?p.color:'#888'}">${n}</span>`}
+
+function r1(){
+  const el=document.getElementById('s1');
+  let h=`
+    <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📊</div>
+      <p>엑셀 파일을 여기에 드래그하거나 클릭해서 업로드</p>
+      <p class="sub">깃허브 호환 엑셀 파일 (.xlsx)을 올리면 자동으로 데이터가 반영됩니다</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
+    </div>
+    <div class="upload-status" id="uploadStatus"></div>
+  `;
+
+  if(uploadedData){
+    h+=`<div style="background:var(--green-dim);border:1px solid rgba(52,211,153,.3);border-radius:var(--radius);padding:14px 18px;margin:0 0 16px">
+      <p style="font-size:13px;color:var(--green);font-weight:600;margin:0 0 4px">✓ 엑셀 데이터 로드 완료</p>
+      <p style="font-size:12px;color:var(--green);opacity:.8;margin:0">${uploadedData.rows.length}개 행 · ${uploadedData.prompts.length}개 프롬프트 · 4개 플랫폼</p>
+    </div>`;
+    h+=`<div class="act"><button class="btn btn-p" onclick="applyUpload()">엑셀 데이터로 채점 실행 →</button></div>`;
+  }
+
+  h+=`<div class="or-divider">또는 직접 입력</div>`;
+  h+=`<div class="prompt-setup-header"><h2>프롬프트 (${prompts.length}/10)</h2><button class="add-btn" onclick="addP()" ${prompts.length<10?'':'disabled'}>＋ 추가</button></div>`;
+  prompts.forEach((p,i)=>{
+    h+=`<div class="pcard"><span class="pn">P${String(i+1).padStart(2,'0')}</span><input value="${esc(p)}" placeholder="프롬프트를 입력하세요..." oninput="prompts[${i}]=this.value">${prompts.length>1?`<button class="rmbtn" onclick="rmP(${i})">✕</button>`:''}</div>`;
+  });
+  h+=`<div class="kwbox"><h3>감지 키워드</h3><div class="kwrow"><label style="color:var(--accent2)">우리 브랜드</label><input value="${esc(brandKw)}" oninput="brandKw=this.value"></div><div class="kwrow"><label style="color:var(--red)">경쟁사</label><input value="${esc(compKw)}" oninput="compKw=this.value"></div></div>`;
+  h+=`<div class="act"><button class="btn btn-p" onclick="go(2)" ${gAP().length>0?'':'disabled'}>다음: 응답 입력 →</button></div>`;
+  el.innerHTML=h;
+  setupDrag();
+}
+
+function setupDrag(){
+  const dz=document.getElementById('dropzone');
+  if(!dz)return;
+  ['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag')}));
+  ['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag')}));
+  dz.addEventListener('drop',ev=>{const f=ev.dataTransfer.files[0];if(f)handleFile(f)});
+}
+
+function handleFile(file){
+  if(!file)return;
+  const st=document.getElementById('uploadStatus');
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.includes('스코어카드')&&!n.includes('집계'));
+      if(!sheetName){st.className='upload-status err';st.textContent='❌ 스코어카드 탭을 찾을 수 없습니다. 올바른 파일인지 확인하세요.';return}
+      const ws=wb.Sheets[sheetName];
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // Parse: find header row, then data rows
+      let headerRow=-1;
+      for(let i=0;i<json.length;i++){
+        const row=json[i];
+        if(row.some(c=>String(c).includes('Platform'))&&row.some(c=>String(c).includes('KPR_Top1'))){headerRow=i;break}
+      }
+      if(headerRow===-1){
+        // Try alternate: find "No" header
+        for(let i=0;i<json.length;i++){
+          if(json[i][0]==='No'&&json[i][1]==='Platform'){headerRow=i;break}
+        }
+      }
+      if(headerRow===-1){st.className='upload-status err';st.textContent='❌ 헤더를 찾을 수 없습니다.';return}
+
+      const rows=[];
+      const promptSet=new Set();
+      for(let i=headerRow+1;i<json.length;i++){
+        const r=json[i];
+        if(!r[1]||!r[2])continue;
+        const platform=String(r[1]).trim();
+        const pno=String(r[2]).trim();
+        const ptxt=String(r[3]||'').trim();
+        const run=parseInt(r[4])||1;
+        const bT1=parseInt(r[5])||0;
+        const cT1=parseInt(r[6])||0;
+        const bT4=parseInt(r[7])||0;
+        const cT4=parseInt(r[8])||0;
+        const bM=parseInt(r[9])||0;
+        const cM=parseInt(r[10])||0;
+        promptSet.add(pno);
+        rows.push({no:rows.length+1,platform,pno,ptxt,run,bT1,cT1,bT4,cT4,bM,cM,has:true});
+      }
+
+      if(rows.length===0){st.className='upload-status err';st.textContent='❌ 데이터 행을 찾을 수 없습니다.';return}
+
+      uploadedData={rows,prompts:[...promptSet]};
+      st.className='upload-status ok';
+      st.textContent=`✅ "${file.name}" 로드 완료 — ${rows.length}개 행 감지`;
+      r1(); // re-render
+    }catch(err){
+      st.className='upload-status err';
+      st.textContent='❌ 파일 읽기 오류: '+err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function applyUpload(){
+  if(!uploadedData)return;
+  const{rows}=uploadedData;
+  const ag={};
+  PL.forEach(p=>{
+    const pr=rows.filter(r=>r.platform===p.name);
+    ag[p.id]={bT1:pr.reduce((s,r)=>s+r.bT1,0),cT1:pr.reduce((s,r)=>s+r.cT1,0),bT4:pr.reduce((s,r)=>s+r.bT4,0),cT4:pr.reduce((s,r)=>s+r.cT4,0),bM:pr.reduce((s,r)=>s+r.bM,0),cM:pr.reduce((s,r)=>s+r.cM,0)};
+  });
+  ag.total={bT1:rows.reduce((s,r)=>s+r.bT1,0),cT1:rows.reduce((s,r)=>s+r.cT1,0),bT4:rows.reduce((s,r)=>s+r.bT4,0),cT4:rows.reduce((s,r)=>s+r.cT4,0),bM:rows.reduce((s,r)=>s+r.bM,0),cM:rows.reduce((s,r)=>s+r.cM,0)};
+  results={rows,ag};
+  go(3);
+}
+
+function r2(){
+  const ps=gAP(),ts=ps.length*PL.length*2;
+  let fi=0;Object.values(resp).forEach(v=>{if(v?.trim())fi++});
+  const pc=ts>0?(fi/ts*100).toFixed(0):0;
+  const el=document.getElementById('s2');
+  let h=`<div class="progress-wrap"><span style="font-size:12px;color:var(--text-dim)">입력 진행률</span><span style="font-family:'JetBrains Mono';font-size:12px;color:var(--accent2)">${fi}/${ts} (${pc}%)</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pc}%"></div></div>`;
+  h+=`<p style="font-size:12px;color:var(--text-muted);margin:0 0 16px">각 플랫폼에서 프롬프트 검색 후 AI 응답을 복사-붙여넣기하세요. 시크릿 모드, 동일 프롬프트 2회 반복.</p>`;
+  PL.forEach(p=>{
+    let pf=0;ps.forEach(q=>{[1,2].forEach(r=>{if((resp[`${p.id}_${q.id}_${r}`]||'').trim())pf++})});
+    const pt=ps.length*2,io=pf<pt;
+    h+=`<div class="platform-section ${io?'open':''}" id="sec-${p.id}"><div class="platform-header" onclick="document.getElementById('sec-${p.id}').classList.toggle('open')"><div class="pdot" style="background:${p.color}"></div><h3>${p.name}</h3><span class="pbadge ${pf===pt?'done':''}">${pf}/${pt}</span><span class="pchev">▾</span></div><div class="platform-body">`;
+    ps.forEach(q=>{
+      h+=`<div class="pc"><div class="pc-label">${q.id}</div><div class="pc-text">${esc(q.text)}</div>`;
+      [1,2].forEach(run=>{const k=`${p.id}_${q.id}_${run}`,v=resp[k]||'';h+=`<div class="rr"><span class="rl">${run}차</span><textarea class="${v.trim()?'filled':''}" placeholder="AI 응답 붙여넣기..." oninput="upR('${k}',this)">${esc(v)}</textarea></div>`});
+      h+=`</div>`;
+    });
+    h+=`</div></div>`;
+  });
+  h+=`<div class="act"><button class="btn btn-o" onclick="go(1)">← 설정</button><button class="btn btn-p" onclick="analyze()" ${fi===0?'disabled':''}>🔍 자동 채점</button></div>`;
+  el.innerHTML=h;
+}
+
+function analyze(){
+  const ps=gAP(),rows=[];let no=1;
+  const bkw=brandKw.split(',').map(s=>s.trim().toLowerCase()).filter(s=>s);
+  const ckw=compKw.split(',').map(s=>s.trim().toLowerCase()).filter(s=>s);
+  PL.forEach(p=>{ps.forEach(q=>{[1,2].forEach(run=>{
+    const t=(resp[`${p.id}_${q.id}_${run}`]||'').toLowerCase();
+    const b=bkw.some(k=>t.includes(k)),c=ckw.some(k=>t.includes(k));
+    let br=-1,cr=-1;const lines=t.split('\n');
+    lines.forEach(l=>{const m=l.match(/^[\s]*(\d+)[.\):\s]/);const rk=m?parseInt(m[1]):-1;if(rk>0){if(br===-1&&bkw.some(k=>l.includes(k)))br=rk;if(cr===-1&&ckw.some(k=>l.includes(k)))cr=rk}});
+    if(br===-1&&b)lines.forEach((l,i)=>{if(br===-1&&bkw.some(k=>l.includes(k)))br=i+1});
+    if(cr===-1&&c)lines.forEach((l,i)=>{if(cr===-1&&ckw.some(k=>l.includes(k)))cr=i+1});
+    rows.push({no:no++,platform:p.name,pid:p.id,pno:q.id,ptxt:q.text,run,bT1:b&&br===1?1:0,cT1:c&&cr===1?1:0,bT4:b&&br>=1&&br<=4?1:0,cT4:c&&cr>=1&&cr<=4?1:0,bM:b?1:0,cM:c?1:0,has:t.trim().length>0});
+  })})});
+  const ag={};PL.forEach(p=>{const pr=rows.filter(r=>r.pid===p.id);ag[p.id]={bT1:pr.reduce((s,r)=>s+r.bT1,0),cT1:pr.reduce((s,r)=>s+r.cT1,0),bT4:pr.reduce((s,r)=>s+r.bT4,0),cT4:pr.reduce((s,r)=>s+r.cT4,0),bM:pr.reduce((s,r)=>s+r.bM,0),cM:pr.reduce((s,r)=>s+r.cM,0)}});
+  ag.total={bT1:rows.reduce((s,r)=>s+r.bT1,0),cT1:rows.reduce((s,r)=>s+r.cT1,0),bT4:rows.reduce((s,r)=>s+r.bT4,0),cT4:rows.reduce((s,r)=>s+r.cT4,0),bM:rows.reduce((s,r)=>s+r.bM,0),cM:rows.reduce((s,r)=>s+r.cM,0)};
+  results={rows,ag};go(3);
+}
+
+function r3(){
+  if(!results)return;const{rows,ag}=results,t=ag.total;
+  const bl=(brandKw.split(',')[0]||'').trim()||'브랜드';
+  const el=document.getElementById('s3');
+  let h=`<div class="score-cards">
+    <div class="sc"><div class="sl">종합 AI-SOV</div><div class="sv" style="color:var(--accent2)">${sov(t.bM,t.cM)}</div><div class="ss">${bl} 점유율</div></div>
+    <div class="sc"><div class="sl">AI-TOP1</div><div class="sv" style="color:var(--orange)">${sov(t.bT1,t.cT1)}</div><div class="ss">1위 노출</div></div>
+    <div class="sc"><div class="sl">AI-TOP4</div><div class="sv" style="color:var(--green)">${sov(t.bT4,t.cT4)}</div><div class="ss">상위 4위</div></div>
+    <div class="sc"><div class="sl">${bl} 총 언급</div><div class="sv">${t.bM}</div><div class="ss">/ ${rows.length}회</div></div>
+  </div>`;
+  h+=`<div class="smgrid">`;
+  [['TOP1','bT1','cT1'],['TOP4','bT4','cT4'],['SOV','bM','cM']].forEach(([ti,bk,ck])=>{
+    h+=`<div class="smbox"><div class="sh">${ti}</div>`;
+    PL.forEach(p=>{const d=ag[p.id];if(d){h+=`<div class="smrow"><span class="sl2">${p.name}</span><span class="sv2">${d[bk]}:${d[ck]} ${sov(d[bk],d[ck])}</span></div>`}});
+    h+=`<div class="smrow tot"><span class="sl2">합계</span><span class="sv2">${t[bk]}:${t[ck]} ${sov(t[bk],t[ck])}</span></div></div>`;
+  });
+  h+=`</div>`;
+  h+=`<div class="rtable"><h3>상세 채점표 (${rows.length}개)</h3><div style="overflow-x:auto"><table><thead><tr><th>No</th><th>Platform</th><th>Prompt</th><th>Run</th><th>${bl} T1</th><th>경쟁 T1</th><th>${bl} T4</th><th>경쟁 T4</th><th>${bl}</th><th>경쟁</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    if(!r.has){h+=`<tr style="opacity:.3"><td>${r.no}</td><td>${ptag(r.platform)}</td><td>${r.pno}</td><td>${r.run}</td><td colspan="6" style="font-size:10px;color:var(--text-muted)">미입력</td></tr>`}
+    else{h+=`<tr><td>${r.no}</td><td>${ptag(r.platform)}</td><td>${r.pno}</td><td>${r.run}</td><td>${chip(r.bT1)}</td><td>${chip(r.cT1)}</td><td>${chip(r.bT4)}</td><td>${chip(r.cT4)}</td><td>${chip(r.bM)}</td><td>${chip(r.cM)}</td></tr>`}
+  });
+  h+=`</tbody></table></div></div>`;
+  h+=`<div class="act"><button class="btn btn-o" onclick="go(1)">← 처음으로</button><button class="btn btn-p" onclick="analyze()">🔄 다시 채점</button><button class="btn btn-g" onclick="dlXlsx()">📥 엑셀 다운로드</button></div>`;
+  el.innerHTML=h;
+}
+
+function addP(){if(prompts.length<10){prompts.push('');r1()}}
+function rmP(i){if(prompts.length>1){prompts.splice(i,1);r1()}}
+function upR(k,ta){resp[k]=ta.value;ta.classList.toggle('filled',ta.value.trim().length>0)}
+
+function dlXlsx(){
+  if(!results)return;const{rows,ag}=results,t=ag.total;
+  const bl=(brandKw.split(',')[0]||'').trim()||'브랜드';
+  const s1=[['AI-SOV 스코어카드'],['No','Platform','Prompt No.','Prompt','Run',`${bl}_Top1`,'경쟁사_Top1',`${bl}_Top4`,'경쟁사_Top4',`${bl}_Mention`,'경쟁사_Mention']];
+  rows.forEach(r=>s1.push([r.no,r.platform,r.pno,r.ptxt||'',r.run,r.bT1,r.cT1,r.bT4,r.cT4,r.bM,r.cM]));
+  const s2=[['집계'],[],['AI-TOP1'],['Platform',`${bl}`,'경쟁사','전체','점유율']];
+  PL.forEach(p=>{const d=ag[p.id];if(d)s2.push([p.name,d.bT1,d.cT1,d.bT1+d.cT1,sov(d.bT1,d.cT1)])});
+  s2.push(['합계',t.bT1,t.cT1,t.bT1+t.cT1,sov(t.bT1,t.cT1)]);
+  s2.push([],['AI-TOP4'],['Platform',`${bl}`,'경쟁사','전체','점유율']);
+  PL.forEach(p=>{const d=ag[p.id];if(d)s2.push([p.name,d.bT4,d.cT4,d.bT4+d.cT4,sov(d.bT4,d.cT4)])});
+  s2.push(['합계',t.bT4,t.cT4,t.bT4+t.cT4,sov(t.bT4,t.cT4)]);
+  s2.push([],['AI-SOV'],['Platform',`${bl}`,'경쟁사','전체','점유율']);
+  PL.forEach(p=>{const d=ag[p.id];if(d)s2.push([p.name,d.bM,d.cM,d.bM+d.cM,sov(d.bM,d.cM)])});
+  s2.push(['합계',t.bM,t.cM,t.bM+t.cM,sov(t.bM,t.cM)]);
+  const wb=XLSX.utils.book_new();
+  const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:5},{wch:14},{wch:10},{wch:50},{wch:5},{wch:12},{wch:13},{wch:12},{wch:13},{wch:13},{wch:13}];
+  XLSX.utils.book_append_sheet(wb,w1,'스코어카드');
+  const w2=XLSX.utils.aoa_to_sheet(s2);w2['!cols']=[{wch:16},{wch:12},{wch:12},{wch:8},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,w2,'집계');
+  XLSX.writeFile(wb,'AI-SOV_채점결과.xlsx');
+}
+
+r1();
+</script>
+</body>
+</html>
