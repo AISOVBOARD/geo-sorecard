@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-SOV 스코어카드</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#050509;--s1:#0c0c16;--s2:#13132a;--s3:#1a1a36;--brd:#252548;--tx:#eef;--txd:#8e8eb4;--txm:#5a5a80;--ac:#7c3aed;--ac2:#a78bfa;--acg:rgba(124,58,237,.1);--gn:#10b981;--gnd:rgba(16,185,129,.1);--rd:#f43f5e;--rdd:rgba(244,63,94,.1);--or:#f59e0b;--cy:#06b6d4;--r:10px}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Noto Sans KR','Sora',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.hd{padding:24px 32px 18px;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(6,182,212,.04));border-bottom:1px solid var(--brd)}.hd h1{font-family:'Sora';font-size:20px;font-weight:700}.hd h1 b{background:linear-gradient(135deg,var(--ac),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}.hd p{color:var(--txd);font-size:12px;margin-top:3px}
+.nav{display:flex;padding:0 32px;border-bottom:1px solid var(--brd);background:var(--s1);overflow-x:auto}.nt{padding:12px 20px;font-size:12px;font-weight:500;color:var(--txm);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none}.nt:hover{color:var(--txd)}.nt.on{color:var(--ac2);border-color:var(--ac);font-weight:600}
+.ct{padding:24px 32px;max-width:1440px}.sec{display:none}.sec.show{display:block}
+.uz{border:2px dashed var(--brd);border-radius:var(--r);padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;margin:0 0 16px}.uz:hover,.uz.drag{border-color:var(--ac);background:var(--acg)}.uz .ic{font-size:28px;margin-bottom:6px}.uz p{font-size:13px;color:var(--txd)}.uz .sm{font-size:11px;color:var(--txm);margin-top:3px}
+.ust{padding:10px 14px;border-radius:var(--r);margin:0 0 12px;font-size:12px;display:none}.ust.ok{display:block;background:var(--gnd);color:var(--gn)}.ust.er{display:block;background:var(--rdd);color:var(--rd)}
+.wk-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;margin:0 0 4px;background:var(--s2);font-size:12px}.wk-item .wl{font-weight:500}.wk-item .wc{color:var(--txd);font-family:'JetBrains Mono';font-size:11px}
+.dg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 20px}.dc{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);padding:14px;text-align:center}.dc .dl{font-size:10px;color:var(--txd);margin:0 0 4px}.dc .dv{font-family:'Sora','JetBrains Mono';font-size:26px;font-weight:800}.dc .ds{font-size:10px;color:var(--txm);margin:3px 0 0}
+.dd{font-size:11px;margin:4px 0 0;font-weight:600}.dd.up{color:var(--gn)}.dd.dn2{color:var(--rd)}.dd.eq{color:var(--txm)}
+.cw{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin:0 0 20px}.cw h3{font-size:13px;font-weight:600;margin:0 0 4px}.cw .cs{font-size:11px;color:var(--txm);margin:0 0 14px}
+.smg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 16px}.sb{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden}.sb .sh{padding:10px 12px;font-size:11px;font-weight:600;border-bottom:1px solid var(--brd);background:var(--s2)}
+.sr{display:flex;justify-content:space-between;padding:6px 12px;font-size:11px;border-bottom:1px solid rgba(37,37,72,.4)}.sr:last-child{border-bottom:none}.sr .sl{color:var(--txd)}.sr .sv{font-family:'JetBrains Mono';font-weight:600;font-size:10px}.sr.tt{background:var(--s2);font-weight:700}.sr.tt .sl{color:var(--tx)}
+.rt{background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;margin:0 0 14px}.rt h3{padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid var(--brd)}
+table{width:100%;border-collapse:collapse;font-size:11px}th{background:var(--s2);padding:6px 8px;text-align:left;font-weight:600;font-size:10px;color:var(--txd);border-bottom:1px solid var(--brd);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid rgba(37,37,72,.3)}tr:last-child td{border-bottom:none}
+.c1{display:inline-block;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono';font-size:10px;font-weight:700;background:var(--gnd);color:var(--gn)}.c0{display:inline-block;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono';font-size:10px;font-weight:700;background:rgba(90,90,128,.12);color:var(--txm)}
+.pt{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;color:#fff}
+.tip{position:relative;cursor:help;border-bottom:1px dotted var(--ac2)}.tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--s3);color:var(--tx);padding:8px 12px;border-radius:6px;font-size:11px;font-weight:400;white-space:normal;width:280px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,.5);border:1px solid var(--brd);opacity:0;pointer-events:none;transition:opacity .15s;z-index:99}.tip:hover::after{opacity:1}
+.ts{display:inline-block;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;background:var(--s2);color:var(--txd);border:1px solid var(--brd);margin:0 4px 8px 0}.ts.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.btn{padding:8px 20px;border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s}.bp{background:var(--ac);color:#fff}.bp:hover{background:#6d28d9}.bo{background:transparent;color:var(--ac2);border:1px solid var(--ac)}.bo:hover{background:var(--acg)}.bg{background:var(--gn);color:#000;font-weight:700}.bg:hover{background:#059669}
+.act{display:flex;gap:8px;margin:16px 0 0;justify-content:flex-end;flex-wrap:wrap}
+.trend-tbl{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 16px}.trend-tbl th{background:var(--s2);padding:8px 6px;text-align:center;font-weight:600;font-size:9px;color:var(--txd);border:1px solid var(--brd)}.trend-tbl td{padding:8px 6px;text-align:center;border:1px solid rgba(37,37,72,.4);font-family:'JetBrains Mono';font-size:11px}
+@media(max-width:900px){.ct{padding:16px}.dg{grid-template-columns:repeat(2,1fr)}.smg{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="hd"><h1><b>AI-SOV</b> 스코어카드</h1><p>KPR 인사이트 트리 vs 대학내일 20대연구소 · 주차별 AI 점유율 추이</p></div>
+<div class="nav"><div class="nt on" onclick="go(1)">① 데이터 관리</div><div class="nt" onclick="go(2)">② 추이 대시보드</div><div class="nt" onclick="go(3)">③ 주차별 상세</div></div>
+<div class="ct"><div class="sec show" id="s1"></div><div class="sec" id="s2"></div><div class="sec" id="s3"></div></div>
+<script>
+const PL=[{id:'chatgpt',n:'ChatGPT',c:'#10a37f'},{id:'gemini',n:'Gemini',c:'#8b5cf6'},{id:'google_aio',n:'Google AIO',c:'#4285f4'},{id:'naver_aio',n:'Naver AIO',c:'#03c75a'}];
+const PR=[['P01','마케팅 트렌드 리포트 발행하는 곳 추천해줘'],['P02','PR회사에서 발행하는 트렌드 리포트 어떤게 있어?'],['P03','마케터가 구독할만한 유료 리포트 추천해줘'],['P04','요즘 20대가 술을 잘 안마시는 이유에 대해 참고할만한 리포트나 연구자료를 알려줘'],['P05','소버 트렌드와 관련된 국내 조사나 보고서 출처를 알려줘']];
+function mkR(raw){const rows=[];let no=1;PL.forEach((p,pi)=>{PR.forEach(([pid,ptxt],qi)=>{[1,2].forEach(run=>{const d=raw[pi*10+qi*2+(run-1)];rows.push({no:no++,platform:p.n,pid:p.id,pno:pid,ptxt,run,bT1:d[0],cT1:d[1],bT4:d[2],cT4:d[3],bM:d[4],cM:d[5],has:true})})})});return rows}
+function mkA(rows){const ag={};PL.forEach(p=>{const pr=rows.filter(r=>r.pid===p.id);ag[p.id]={bT1:pr.reduce((s,r)=>s+r.bT1,0),cT1:pr.reduce((s,r)=>s+r.cT1,0),bT4:pr.reduce((s,r)=>s+r.bT4,0),cT4:pr.reduce((s,r)=>s+r.cT4,0),bM:pr.reduce((s,r)=>s+r.bM,0),cM:pr.reduce((s,r)=>s+r.cM,0)}});ag.total={bT1:rows.reduce((s,r)=>s+r.bT1,0),cT1:rows.reduce((s,r)=>s+r.cT1,0),bT4:rows.reduce((s,r)=>s+r.bT4,0),cT4:rows.reduce((s,r)=>s+r.cT4,0),bM:rows.reduce((s,r)=>s+r.bM,0),cM:rows.reduce((s,r)=>s+r.cM,0)};return ag}
+const D0=[[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,1,0,1,0],[0,0,0,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[0,0,1,0,1,0],[0,0,0,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1]];
+const D1=[[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[0,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1]];
+const D2=[[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,1,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1]];
+const D3=[[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,1,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1]];
+const D4=[[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,1,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,1,0,1,0],[0,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[0,0,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[0,0,0,1,0,1],[0,0,0,0,0,1]];
+let weeks=[
+  {label:'실험전',date:'04.15',rows:mkR(D0)},
+  {label:'4월 4주차',date:'04.29',rows:mkR(D1)},
+  {label:'5월 1주차',date:'05.07',rows:mkR(D2)},
+  {label:'5월 2주차',date:'05.13',rows:mkR(D3)},
+  {label:'5월 3주차',date:'05.20',rows:mkR(D4)},
+];
+weeks.forEach(w=>{w.ag=mkA(w.rows)});
+let step=1,viewWeek=weeks.length-1;
+function go(n){step=n;document.querySelectorAll('.nt').forEach((t,i)=>t.classList.toggle('on',i+1===n));['s1','s2','s3'].forEach((id,i)=>document.getElementById(id).classList.toggle('show',i+1===n));if(n===1)r1();if(n===2)r2();if(n===3)r3()}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function sovN(a,b){const t=a+b;return t===0?0:a/t*100}
+function sov(a,b){const v=sovN(a,b);return v===0?'-':v.toFixed(1)+'%'}
+function chip(v){return v?'<span class="c1">1</span>':'<span class="c0">0</span>'}
+function ptag(n){const p=PL.find(x=>x.n===n);return`<span class="pt" style="background:${p?p.c:'#888'}">${n}</span>`}
+function delta(now,prev){const d=now-prev;if(Math.abs(d)<0.05)return'<span class="dd eq">— 0</span>';if(d>0)return`<span class="dd up">▲ +${d.toFixed(1)}%p</span>`;return`<span class="dd dn2">▼ ${d.toFixed(1)}%p</span>`}
+function r1(){
+  const el=document.getElementById('s1');
+  let h=`<div class="uz" id="dz" onclick="document.getElementById('fi').click()"><div class="ic">📊</div><p>새 주차 엑셀 업로드 (드래그 또는 클릭)</p><p class="sm">업로드하면 자동으로 새 주차가 추가됩니다</p><input type="file" id="fi" accept=".xlsx,.xls" style="display:none" onchange="hFile(this.files[0])"></div><div class="ust" id="us"></div>`;
+  h+=`<div style="background:var(--s1);border:1px solid var(--brd);border-radius:var(--r);padding:14px;margin:0 0 16px"><h3 style="font-size:13px;font-weight:600;margin:0 0 10px">📅 등록된 주차 (${weeks.length}개)</h3>`;
+  weeks.forEach(w=>{const t=w.ag.total;h+=`<div class="wk-item"><span class="wl">${w.label} <span style="color:var(--txm);font-size:10px">${w.date}</span></span><span class="wc">SOV ${sov(t.bM,t.cM)} · T1 ${sov(t.bT1,t.cT1)} · T4 ${sov(t.bT4,t.cT4)}</span></div>`});
+  h+=`</div><div class="act"><button class="btn bp" onclick="go(2)">📈 추이 대시보드 →</button></div>`;
+  el.innerHTML=h;
+  const dz=document.getElementById('dz');['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag')}));dz.addEventListener('drop',ev=>{const f=ev.dataTransfer.files[0];if(f)hFile(f)});
+}
+function hFile(file){
+  if(!file)return;const st=document.getElementById('us');
+  const reader=new FileReader();reader.onload=function(e){try{
+    const data=new Uint8Array(e.target.result),wb=XLSX.read(data,{type:'array'});
+    const sn=wb.SheetNames.find(n=>n.includes('스코어카드')&&!n.includes('집계'))||wb.SheetNames[0];
+    const json=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+    let hr=-1;for(let i=0;i<10;i++){if(String(json[i]?.[0])==='No'){hr=i;break}}
+    if(hr===-1){st.className='ust er';st.textContent='❌ 헤더 없음';return}
+    const rows=[];
+    for(let i=hr+1;i<json.length;i++){const r=json[i];if(!r[1])continue;rows.push({no:rows.length+1,platform:String(r[1]).trim(),pno:String(r[2]).trim(),ptxt:String(r[3]||''),run:parseInt(r[4])||1,bT1:parseInt(r[5])||0,cT1:parseInt(r[6])||0,bT4:parseInt(r[7])||0,cT4:parseInt(r[8])||0,bM:parseInt(r[9])||0,cM:parseInt(r[10])||0,has:true,pid:PL.find(p=>p.n===String(r[1]).trim())?.id||''})}
+    if(!rows.length){st.className='ust er';st.textContent='❌ 데이터 없음';return}
+    const label=file.name.replace(/\.xlsx?$/i,'').replace(/깃허브.*파일_?/,'').replace(/_/g,' ')||`주차${weeks.length}`;
+    const today=new Date();const ds=`${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+    weeks.push({label,date:ds,rows,ag:mkA(rows)});viewWeek=weeks.length-1;
+    st.className='ust ok';st.textContent=`✅ "${label}" 추가 (${rows.length}행) — 총 ${weeks.length}주차`;r1();
+  }catch(err){st.className='ust er';st.textContent='❌ '+err.message}};reader.readAsArrayBuffer(file);
+}
+function r2(){
+  const el=document.getElementById('s2');
+  const lt=weeks[weeks.length-1],pv=weeks.length>1?weeks[weeks.length-2]:null;
+  const ltt=lt.ag.total,pvt=pv?pv.ag.total:null;
+  let h=`<div class="dg">
+    <div class="dc"><div class="dl">종합 AI-SOV</div><div class="dv" style="color:var(--ac2)">${sov(ltt.bM,ltt.cM)}</div><div class="ds">${lt.label}</div>${pvt?delta(sovN(ltt.bM,ltt.cM),sovN(pvt.bM,pvt.cM)):''}</div>
+    <div class="dc"><div class="dl">AI-TOP1</div><div class="dv" style="color:var(--or)">${sov(ltt.bT1,ltt.cT1)}</div><div class="ds">${lt.label}</div>${pvt?delta(sovN(ltt.bT1,ltt.cT1),sovN(pvt.bT1,pvt.cT1)):''}</div>
+    <div class="dc"><div class="dl">AI-TOP4</div><div class="dv" style="color:var(--gn)">${sov(ltt.bT4,ltt.cT4)}</div><div class="ds">${lt.label}</div>${pvt?delta(sovN(ltt.bT4,ltt.cT4),sovN(pvt.bT4,pvt.cT4)):''}</div>
+    <div class="dc"><div class="dl">KPR 총 언급</div><div class="dv">${ltt.bM}</div><div class="ds">/ ${lt.rows.length}회</div></div></div>`;
+  const mets=[{k:'SOV',bk:'bM',ck:'cM',c:'var(--ac2)'},{k:'TOP1',bk:'bT1',ck:'cT1',c:'var(--or)'},{k:'TOP4',bk:'bT4',ck:'cT4',c:'var(--gn)'}];
+  const W=660,H=170,pad=50,rp=20,xS=weeks.length>1?(W-pad-rp)/(weeks.length-1):0;
+  let svg=`<svg viewBox="0 0 ${W} ${H+40}" style="width:100%;height:auto">`;
+  for(let y=0;y<=100;y+=25){const py=H-y/100*(H-30)+10;svg+=`<line x1="${pad}" y1="${py}" x2="${W-rp}" y2="${py}" stroke="rgba(37,37,72,.5)" stroke-width=".5"/><text x="${pad-6}" y="${py+4}" text-anchor="end" fill="#5a5a80" font-size="9" font-family="JetBrains Mono">${y}%</text>`}
+  weeks.forEach((w,i)=>{const x=pad+i*xS;svg+=`<text x="${x}" y="${H+30}" text-anchor="middle" fill="#8e8eb4" font-size="8" font-family="Noto Sans KR">${w.label}</text>`});
+  mets.forEach(m=>{const pts=weeks.map((w,i)=>{const t=w.ag.total;const v=sovN(t[m.bk],t[m.ck]);return{x:pad+i*xS,y:H-v/100*(H-30)+10,v}});if(pts.length>1){let path=`M${pts[0].x},${pts[0].y}`;for(let i=1;i<pts.length;i++)path+=` L${pts[i].x},${pts[i].y}`;svg+=`<path d="${path}" fill="none" stroke="${m.c}" stroke-width="2.5" stroke-linecap="round"/>`}pts.forEach(p=>{svg+=`<circle cx="${p.x}" cy="${p.y}" r="4" fill="${m.c}" stroke="var(--bg)" stroke-width="2"/><text x="${p.x}" y="${p.y-10}" text-anchor="middle" fill="${m.c}" font-size="10" font-weight="600" font-family="JetBrains Mono">${p.v.toFixed(0)}%</text>`})});
+  svg+=`</svg>`;
+  h+=`<div class="cw"><h3>📈 주차별 KPR 점유율 추이</h3><p class="cs">${mets.map(m=>`<span style="color:${m.c}">● ${m.k}</span>`).join('  ')}</p>${svg}</div>`;
+  h+=`<div class="cw"><h3>📊 주차별 수치 비교</h3><table class="trend-tbl"><thead><tr><th>지표</th>`;
+  weeks.forEach(w=>{h+=`<th>${w.label}<br><span style="font-weight:400;color:var(--txm)">${w.date}</span></th>`});
+  h+=`<th>총 변화</th></tr></thead><tbody>`;
+  mets.forEach(m=>{h+=`<tr><td style="text-align:left;font-family:'Noto Sans KR';font-weight:500;color:var(--txd)">${m.k}</td>`;weeks.forEach((w,i)=>{const t=w.ag.total;const v=sovN(t[m.bk],t[m.ck]);const vs=sov(t[m.bk],t[m.ck]);let d='';if(i>0){const pv2=sovN(weeks[i-1].ag.total[m.bk],weeks[i-1].ag.total[m.ck]);const diff=v-pv2;if(Math.abs(diff)>=0.05)d=diff>0?` <span style="color:var(--gn);font-size:9px">▲${diff.toFixed(1)}</span>`:` <span style="color:var(--rd);font-size:9px">▼${diff.toFixed(1)}</span>`}h+=`<td>${vs}${d}</td>`});const fi=weeks[0].ag.total,la=weeks[weeks.length-1].ag.total;const td=sovN(la[m.bk],la[m.ck])-sovN(fi[m.bk],fi[m.ck]);h+=`<td style="font-weight:700;color:${td>=0?'var(--gn)':'var(--rd)'}">${td>=0?'+':''}${td.toFixed(1)}%p</td></tr>`});
+  h+=`</tbody></table></div>`;
+  h+=`<div class="smg">`;mets.forEach(m=>{h+=`<div class="sb"><div class="sh">${m.k}</div>`;PL.forEach(p=>{const vals=weeks.map(w=>sov(w.ag[p.id][m.bk],w.ag[p.id][m.ck]));h+=`<div class="sr"><span class="sl">${p.n}</span><span class="sv">${vals.join(' → ')}</span></div>`});const tots=weeks.map(w=>sov(w.ag.total[m.bk],w.ag.total[m.ck]));h+=`<div class="sr tt"><span class="sl">합계</span><span class="sv">${tots.join(' → ')}</span></div></div>`});
+  h+=`</div><div class="act"><button class="btn bo" onclick="go(1)">←</button><button class="btn bp" onclick="go(3)">주차별 상세 →</button><button class="btn bg" onclick="dlX()">📥 엑셀</button></div>`;el.innerHTML=h;
+}
+function r3(){
+  const el=document.getElementById('s3');let h=`<div>`;weeks.forEach((w,i)=>{h+=`<span class="ts ${i===viewWeek?'on':''}" onclick="viewWeek=${i};r3()">${w.label}</span>`});h+=`</div>`;
+  const ds=weeks[viewWeek],t=ds.ag.total;const pv=viewWeek>0?weeks[viewWeek-1]:null,pvt=pv?pv.ag.total:null;
+  h+=`<div class="dg">
+    <div class="dc"><div class="dl">AI-SOV</div><div class="dv" style="color:var(--ac2)">${sov(t.bM,t.cM)}</div>${pvt?delta(sovN(t.bM,t.cM),sovN(pvt.bM,pvt.cM)):''}</div>
+    <div class="dc"><div class="dl">TOP1</div><div class="dv" style="color:var(--or)">${sov(t.bT1,t.cT1)}</div>${pvt?delta(sovN(t.bT1,t.cT1),sovN(pvt.bT1,pvt.cT1)):''}</div>
+    <div class="dc"><div class="dl">TOP4</div><div class="dv" style="color:var(--gn)">${sov(t.bT4,t.cT4)}</div>${pvt?delta(sovN(t.bT4,t.cT4),sovN(pvt.bT4,pvt.cT4)):''}</div>
+    <div class="dc"><div class="dl">KPR 언급</div><div class="dv">${t.bM}/${ds.rows.length}</div></div></div>`;
+  h+=`<div class="rt"><h3>${ds.label} 상세 (${ds.date})</h3><div style="overflow-x:auto"><table><thead><tr><th>No</th><th>Platform</th><th>Prompt</th><th>Run</th><th>KPR T1</th><th>경쟁 T1</th><th>KPR T4</th><th>경쟁 T4</th><th>KPR</th><th>경쟁</th></tr></thead><tbody>`;
+  ds.rows.forEach(r=>{h+=`<tr><td>${r.no}</td><td>${ptag(r.platform)}</td><td><span class="tip" data-tip="${esc(r.ptxt)}">${r.pno}</span></td><td>${r.run}</td><td>${chip(r.bT1)}</td><td>${chip(r.cT1)}</td><td>${chip(r.bT4)}</td><td>${chip(r.cT4)}</td><td>${chip(r.bM)}</td><td>${chip(r.cM)}</td></tr>`});
+  h+=`</tbody></table></div></div><div class="act"><button class="btn bo" onclick="go(2)">← 대시보드</button><button class="btn bg" onclick="dlX()">📥 엑셀</button></div>`;el.innerHTML=h;
+}
+function dlX(){
+  const wb=XLSX.utils.book_new();weeks.forEach(w=>{const s=[['AI-SOV — '+w.label+' ('+w.date+')'],['No','Platform','Prompt No.','Prompt','Run','KPR_Top1','경쟁사_Top1','KPR_Top4','경쟁사_Top4','KPR_Mention','경쟁사_Mention']];w.rows.forEach(r=>s.push([r.no,r.platform,r.pno,r.ptxt,r.run,r.bT1,r.cT1,r.bT4,r.cT4,r.bM,r.cM]));const ws=XLSX.utils.aoa_to_sheet(s);ws['!cols']=[{wch:5},{wch:14},{wch:10},{wch:50},{wch:5},{wch:12},{wch:13},{wch:12},{wch:13},{wch:13},{wch:13}];XLSX.utils.book_append_sheet(wb,ws,w.label.substring(0,31))});
+  const cs=[['추이'],[''],['주차','SOV KPR','SOV 경쟁','SOV%','T1 KPR','T1 경쟁','T1%','T4 KPR','T4 경쟁','T4%']];
+  weeks.forEach(w=>{const t=w.ag.total;cs.push([w.label,t.bM,t.cM,sov(t.bM,t.cM),t.bT1,t.cT1,sov(t.bT1,t.cT1),t.bT4,t.cT4,sov(t.bT4,t.cT4)])});
+  const cw=XLSX.utils.aoa_to_sheet(cs);XLSX.utils.book_append_sheet(wb,cw,'추이');XLSX.writeFile(wb,'AI-SOV_추이_'+weeks.length+'주차.xlsx');
+}
+r1();
+</script>
+</body>
+</html>
